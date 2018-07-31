@@ -1,5 +1,7 @@
 #include <vector>
 #include "interface/testanalyser.h"
+#include "../interface/helpers.h"
+#include "../interface/ttbar_solver.h"
 #include "TMath.h"
 using namespace std;
 
@@ -49,7 +51,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				{
 				if(jet.at(ij)->BTag) nrOfBJets+=1;
 				}
-			//if (nrOfBJets<2) continue;
+			if (nrOfBJets<2) continue;
 			for (size_t i = 0; i<jet.size(); i++){
 				if ((jet.at(i)->PT) > leadingJetPTLeptonic){
 					leadingJetVectorLeptonic.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
@@ -60,25 +62,27 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 			double M_mu =  0.10566;
 			double M_e = 0.511e-3;
 			double M_lepton = M_mu;
-
-			double emu; 
-			double pxmu;
-			double pymu;
-			double pzmu;
-
-			if (elecs.size()==1) M_lepton = M_e;
+			double emu, pxmu, pymu, pzmu; 
+			double leptonPT, leptonEta, leptonPhi;
 			TLorentzVector elecVec;
+			TLorentzVector muVec;
+
 			if (elecs.size()==1){
-				elecVec.SetPtEtaPhiM(elecs.at(0)->PT, elecs.at(0)->Eta, elecs.at(0)->Phi, M_e);
+				M_lepton = M_e;
+				leptonPT = elecs.at(0)->PT;
+				leptonEta = elecs.at(0)->Eta;
+				leptonPhi = elecs.at(0)->Phi;
+				elecVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
 				emu = elecVec.E();
 				pxmu = elecVec.Px();
 				pymu = elecVec.Py();
 				pzmu = elecVec.Pz();
 				lepVec = elecVec;
-			}
-			TLorentzVector muVec;
-			if (elecs.size()==0){
-				muVec.SetPtEtaPhiM(muontight.at(0)->PT, muontight.at(0)->Eta, muontight.at(0)->Phi, M_mu);
+			} else{
+				leptonPT = muontight.at(0)->PT;
+				leptonEta = muontight.at(0)->Eta;
+				leptonPhi = muontight.at(0)->Phi;
+				muVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
 				emu = muVec.E();
 				pxmu = muVec.Px();
 				pymu = muVec.Py();
@@ -153,13 +157,21 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 			TLorentzVector bJetVec;
 			for (size_t i = 0; i<jet.size(); i++){
 				if (jet.at(i)->BTag && (TMath::Abs(jet.at(i)->Eta) < 2.5)){
-					//TLorentzVector temporaryVec;
-					//temporaryVec.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
-					//if (TMath::Abs(temporaryVec.M()-TOP_MASS)<(TMath::Abs(bJetVec.M()-TOP_MASS)))
-					//	bJetVec = temporaryVec;
-					bJetVec.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
-
-					topQuarkHisto->Fill((bJetVec+lepVec+neutrinoP4).M());
+					double DelR;
+					if (elecs.size()==1){
+						DelR = deltaR(jet.at(i), elecs.at(0));
+					}
+					if (elecs.size()==0){
+						DelR = deltaR(jet.at(i), muontight.at(0));
+					}
+					if (DelR<1.2){
+						bJetVec = makeTLorentzVector(jet.at(i));
+						TLorentzVector quarkVec = bJetVec+lepVec+neutrinoP4;
+						double JetR;
+						JetR = TMath::Sqrt(TMath::Power(jet.at(i)->DeltaEta,2)+TMath::Power(jet.at(i)->DeltaPhi,2));
+						if(DelR<JetR){quarkVec = quarkVec - lepVec;}
+						topQuarkHisto->Fill((quarkVec).M());
+					}
 				}
 			}
 		}
