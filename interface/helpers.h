@@ -16,10 +16,21 @@ double deltaR(T* a, V* b){
 	double deta = a->Eta - b->Eta;
 	return TMath::Sqrt(dphi*dphi + deta*deta);
 }
-/*
-double deltaR(double aPhi, double bPhi, double aEta, double bEta){
-	double dphi = deltaPhi(aPhi, bPhi);
-	double deta = aEta - bEta;
-	return TMath::Sqrt(dphi*dphi + deta*deta);
+
+template<class T>
+bool acceptLJet(T* jet){
+	bool acceptable = true;
+	if ((jet->BTag) || (TMath::Abs(jet->Eta)>2.5)){
+		acceptable = false;
+	}
+	return acceptable;
 }
-*/
+
+template<class T>
+bool acceptBJet(T* jet){
+	bool acceptable = true;
+	if ((!(jet->BTag)) || (TMath::Abs(jet->Eta)>2.5)){
+		acceptable = false;
+	}
+	return acceptable;
+}

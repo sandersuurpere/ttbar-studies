@@ -22,10 +22,13 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	TH1* neutrinoMomentumHisto = addPlot(new TH1D("neutrinoMomentumHisto", "nu histo",100,0,200), "pT","N");
 	TH1* leadingJetHistoAll = addPlot(new TH1D("leadingJetHistoAll", "Leading jet masses (all events)",100,0,50), "m_jet","N_e");
 	TH1* leadingJetHistoLeptonic = addPlot(new TH1D("leadingJetHistoLeptonic", "Leading jet masses in single lepton events",100,0,50), "m_jet","N_e");
+	TH1* quarkHistoHadronicBoosted= addPlot(new TH1D("quarkHistoHadronicBoosted", "Top quark mass from full hadronic, boosted",100,0,400), "m_3jets","N_e");
+
 	size_t nevents=tree()->entries();
 
 	if(isTestMode())
 		nevents/=100;
+
 	for(size_t eventno=0; eventno<nevents; eventno++){
 		/*
 		 * The following two lines report the status and set the event link
@@ -77,12 +80,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				nrOfHighPtMus=nrOfHighPtMus+1;
 			}
 		}	
-		cout<<"highpt leptons "<<nrOfHighPtLeps<<endl;
-		cout<<"highpt elecs "<<nrOfHighPtElecs<<endl;
-		cout<<"highpt mus "<<nrOfHighPtMus<<endl;
-		
-		cout<<"bjets "<<bjets<<endl;
-		cout<<"ljets"<<ljets<<endl;
+
 		if (nrOfHighPtLeps != 1) continue;
 		if (nrOfHighPtElecs==1){
 			for(size_t i=0; i<elecs.size(); i++){
@@ -98,17 +96,6 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 			}
 		}
 
-		cout<<"lepindex "<<lepIndex<<endl;
-		//if((elecs.size()==1 && ((elecs.at(0)->PT) > 30) && (TMath::Abs(elecs.at(0)->Eta) < 2.1) && muontight.size()==0) ||
-		//	(muontight.size()==1 && ((muontight.at(0)->PT) > 30) && (TMath::Abs(muontight.at(0)->Eta) < 2.1) && elecs.size()==0)){ 
-
-		//count n b-jets
-		int nrOfBJets=0;
-		for(size_t ij=0; ij<jet.size(); ij++) 
-		{
-			if(jet.at(ij)->BTag) nrOfBJets+=1;
-		}
-		if (nrOfBJets<2) continue;
 		for (size_t i = 0; i<jet.size(); i++){
 			if ((jet.at(i)->PT) > leadingJetPTLeptonic){
 				leadingJetVectorLeptonic.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
@@ -208,36 +195,81 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				else pznu = tmpsol2;
 			}//if type==3
 		}//else
+		
 		TLorentzVector neutrinoP4(missingET.Px(),
 							missingET.Py(),
 							pznu,
 							TMath::Sqrt(TMath::Power(missingET.Pt(),2)+TMath::Power(pznu,2)));
-			neutrinoMomentumHisto->Fill(neutrinoP4.Pt());
-			wBosonHistoL->Fill((lepVec+neutrinoP4).M());
-			TLorentzVector bJetVec(0.,0.,0.,0.);
-			for (size_t i = 0; i<jet.size(); i++){
-				if (jet.at(i)->BTag && (TMath::Abs(jet.at(i)->Eta) < 2.5)){
-					double DelR=0;
-					if (nrOfHighPtElecs==1){
-						DelR = deltaR(jet.at(i), elecs.at(lepIndex));
-					}
-					if (nrOfHighPtMus==1){
-						DelR = deltaR(jet.at(i), muontight.at(lepIndex));
-					}
-					if (DelR<1.2){
-						bJetVec = makeTLorentzVector(jet.at(i));
-						TLorentzVector quarkVec = bJetVec+lepVec+neutrinoP4;
-						double JetR=0;
-						JetR = TMath::Sqrt(TMath::Power(jet.at(i)->DeltaEta,2)+TMath::Power(jet.at(i)->DeltaPhi,2));
-						if(DelR<JetR){quarkVec = quarkVec - lepVec;}
-						topQuarkHisto->Fill((quarkVec).M());
-					}
+
+		neutrinoMomentumHisto->Fill(neutrinoP4.Pt());
+		wBosonHistoL->Fill((lepVec+neutrinoP4).M());
+		TLorentzVector bJetVec(0.,0.,0.,0.);
+		for (size_t i = 0; i<jet.size(); i++){
+			if (acceptBJet(jet.at(i))){
+				double DelR=0;
+				if (nrOfHighPtElecs==1){
+					DelR = deltaR(jet.at(i), elecs.at(lepIndex));
 				}
+				if (nrOfHighPtMus==1){
+					DelR = deltaR(jet.at(i), muontight.at(lepIndex));
+				}
+				if (DelR<1.2){ // getting top mass from leptonic decay
+					bJetVec = makeTLorentzVector(jet.at(i));
+					TLorentzVector quarkVec = bJetVec+lepVec+neutrinoP4;
+					double JetR=0;
+					JetR = TMath::Sqrt(TMath::Power(jet.at(i)->DeltaEta,2)+TMath::Power(jet.at(i)->DeltaPhi,2));
+					if(DelR<JetR){quarkVec = quarkVec - lepVec;}
+					topQuarkHisto->Fill((quarkVec).M());
+
+				}else{ // getting top mass from hadronic decay 
+					for(size_t j=0;j<jet.size();j++){
+						if (acceptLJet(jet.at(j))){
+							DelR = deltaR(jet.at(i),jet.at(j));
+							if (DelR<1.2){
+								for(size_t k=j;k<jet.size();k++){
+									if(acceptLJet(jet.at(k))){
+										size_t leading=0;
+										if(jet.at(i)->PT > jet.at(j)->PT){
+											leading=i;
+										}else{leading=j;}
+
+										if(jet.at(leading)->PT < jet.at(k)->PT){
+											leading=k;
+										}
+										if(leading!=k){
+											DelR=deltaR(jet.at(leading),jet.at(k));
+										}else{
+											DelR=deltaR(jet.at(i),jet.at(k));
+											double DelR_2=0;
+											DelR = deltaR(jet.at(j),jet.at(k));
+											if(DelR<DelR_2){
+												DelR=DelR_2;
+											}
+										}
+										if(DelR<1.2){
+											TLorentzVector jet1(0.,0.,0.,0.);
+											jet1=makeTLorentzVector(jet.at(i));
+											TLorentzVector jet2(0.,0.,0.,0.);
+											jet2=makeTLorentzVector(jet.at(j));
+											TLorentzVector jet3(0.,0.,0.,0.);
+											jet3=makeTLorentzVector(jet.at(k));
+
+											TLorentzVector topQ(0.,0.,0.,0.);
+											topQ=jet1+jet2+jet3;
+											quarkHistoHadronicBoosted->Fill(topQ.M());
+										}
+									}
+								}
+							}
+						}
+					}
+				
+				}//else statement (corresponding to DelR>=1.2)
 			}
-	//	}
-		leadingJetHistoAll->Fill(leadingJetVectorA.M());
-		if (leadingJetVectorLeptonic.M()>0)
-			leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
+		}
+	leadingJetHistoAll->Fill(leadingJetVectorA.M());
+	if (leadingJetVectorLeptonic.M()>0)
+		leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
 	} // for event
 	processEndFunction();
 }//void testanalyser::analyze
