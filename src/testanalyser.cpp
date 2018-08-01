@@ -33,148 +33,208 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		 */
 		reportStatus(eventno,nevents);
 		tree()->setEntry(eventno);
- 		TLorentzVector leadingJetVectorA; //the leading jet of an event
-		Double_t leadingJetPT;
-		TLorentzVector leadingJetVectorLeptonic;
-		Double_t leadingJetPTLeptonic;
-		TLorentzVector lepVec;
+
+		//At least 2 b-jets
+		size_t bjets=0;
+		size_t ljets=0;
+		for(size_t i=0;i<jet.size();i++){
+			if(fabs(jet.at(i)->Eta)<2.5){
+				if(jet.at(i)->BTag){
+					bjets++;
+				}else{ljets++;}
+			}
+		}
+		if(bjets<2){continue;}
+		if(ljets<2){continue;}
+
+
+		TLorentzVector leadingJetVectorA(0.,0.,0.,0.); //the leading jet of an event
+		Double_t leadingJetPT=0;
+		TLorentzVector leadingJetVectorLeptonic(0.,0.,0.,0.);
+		Double_t leadingJetPTLeptonic=0;
+		TLorentzVector lepVec(0.,0.,0.,0.);
+
 		for (size_t i = 0; i<jet.size(); i++){
 			if ((jet.at(i)->PT) > leadingJetPT){
 				leadingJetVectorA.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
 			}
 		}
-		if((elecs.size()==1 && ((elecs.at(0)->PT) > 30) && (TMath::Abs(elecs.at(0)->Eta) < 2.1) && muontight.size()==0) ||
- 			(muontight.size()==1 && ((muontight.at(0)->PT) > 30) && (TMath::Abs(muontight.at(0)->Eta) < 2.1) && elecs.size()==0)){ 
-			//count n b-jets
-			int nrOfBJets;	
-			for(size_t ij=0; ij<jet.size(); ij++) 
-				{
-				if(jet.at(ij)->BTag) nrOfBJets+=1;
+
+		//determine the number of leptons with pt>30
+		size_t nrOfHighPtLeps=0;
+		size_t nrOfHighPtElecs=0;
+		size_t nrOfHighPtMus=0;
+		size_t lepIndex=0; // hold the value corresponding to the index of the high PT lepton
+		for(size_t i=0; i<elecs.size(); i++){
+			if (((elecs.at(i)->PT) > 30) && (TMath::Abs(elecs.at(i)->Eta) < 2.1)){
+				nrOfHighPtLeps=nrOfHighPtLeps+1;
+				nrOfHighPtElecs=nrOfHighPtElecs+1;
+			}
+		}	
+		for(size_t i=0; i<muontight.size(); i++){
+			if (((muontight.at(i)->PT) > 30) && (TMath::Abs(muontight.at(i)->Eta) < 2.1)){
+				nrOfHighPtLeps=nrOfHighPtLeps+1;
+				nrOfHighPtMus=nrOfHighPtMus+1;
+			}
+		}	
+		cout<<"highpt leptons "<<nrOfHighPtLeps<<endl;
+		cout<<"highpt elecs "<<nrOfHighPtElecs<<endl;
+		cout<<"highpt mus "<<nrOfHighPtMus<<endl;
+		
+		cout<<"bjets "<<bjets<<endl;
+		cout<<"ljets"<<ljets<<endl;
+		if (nrOfHighPtLeps != 1) continue;
+		if (nrOfHighPtElecs==1){
+			for(size_t i=0; i<elecs.size(); i++){
+				if (elecs.at(i)->PT > 30){
+					lepIndex = i;
 				}
-			if (nrOfBJets<2) continue;
-			for (size_t i = 0; i<jet.size(); i++){
-				if ((jet.at(i)->PT) > leadingJetPTLeptonic){
-					leadingJetVectorLeptonic.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
+			}
+		}else{
+			for(size_t i=0; i<muontight.size(); i++){
+				if (muontight.at(i)->PT > 30){
+					lepIndex = i;
 				}
 			}
-			int type = 1;
-			double M_W  = W_BOSON_MASS;
-			double M_mu =  0.10566;
-			double M_e = 0.511e-3;
-			double M_lepton = M_mu;
-			double emu, pxmu, pymu, pzmu; 
-			double leptonPT, leptonEta, leptonPhi;
-			TLorentzVector elecVec;
-			TLorentzVector muVec;
+		}
 
-			if (elecs.size()==1){
-				M_lepton = M_e;
-				leptonPT = elecs.at(0)->PT;
-				leptonEta = elecs.at(0)->Eta;
-				leptonPhi = elecs.at(0)->Phi;
-				elecVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
-				emu = elecVec.E();
-				pxmu = elecVec.Px();
-				pymu = elecVec.Py();
-				pzmu = elecVec.Pz();
-				lepVec = elecVec;
-			} else{
-				leptonPT = muontight.at(0)->PT;
-				leptonEta = muontight.at(0)->Eta;
-				leptonPhi = muontight.at(0)->Phi;
-				muVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
-				emu = muVec.E();
-				pxmu = muVec.Px();
-				pymu = muVec.Py();
-				pzmu = muVec.Pz();
-				lepVec = muVec;
+		cout<<"lepindex "<<lepIndex<<endl;
+		//if((elecs.size()==1 && ((elecs.at(0)->PT) > 30) && (TMath::Abs(elecs.at(0)->Eta) < 2.1) && muontight.size()==0) ||
+		//	(muontight.size()==1 && ((muontight.at(0)->PT) > 30) && (TMath::Abs(muontight.at(0)->Eta) < 2.1) && elecs.size()==0)){ 
+
+		//count n b-jets
+		int nrOfBJets=0;
+		for(size_t ij=0; ij<jet.size(); ij++) 
+		{
+			if(jet.at(ij)->BTag) nrOfBJets+=1;
+		}
+		if (nrOfBJets<2) continue;
+		for (size_t i = 0; i<jet.size(); i++){
+			if ((jet.at(i)->PT) > leadingJetPTLeptonic){
+				leadingJetVectorLeptonic.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
 			}
-			TLorentzVector missingET;
-			missingET=(met.at(0)->P4());
-			double pxnu = missingET.Px();
-			double pynu =missingET.Py();
-			double pznu = 0.;
-			// use pznu = - B/2*A +/- sqrt(B*B-4*A*C)/(2*A)
+		}
+		int type = 1;
+		double M_W  = W_BOSON_MASS;
+		double M_mu =  0.10566;
+		double M_e = 0.511e-3;
+		double M_lepton = M_mu;
+		double emu=0;
+		double pxmu=0;
+		double pymu=0;
+		double pzmu=0; 
+		double leptonPT=0;
+		double leptonEta=0;
+		double leptonPhi=0;
+		TLorentzVector elecVec(0.,0.,0.,0.);
+		TLorentzVector muVec(0.,0.,0.,0.);
 
-			double a = M_W*M_W - M_lepton*M_lepton + 2.0*(pxmu*pxnu + pymu*pynu);
-			double A = 4.0*(emu*emu - pzmu*pzmu);
-			double B = -4.0*a*pzmu;
-			double C = 4.0*emu*emu*(pxnu*pxnu + pynu*pynu) - a*a;
+		if (nrOfHighPtElecs==1){
+			M_lepton = M_e;
+			leptonPT = elecs.at(lepIndex)->PT;
+			leptonEta = elecs.at(lepIndex)->Eta;
+			leptonPhi = elecs.at(lepIndex)->Phi;
+			elecVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
+			pymu = elecVec.Py();
+			pzmu = elecVec.Pz();
+			lepVec = elecVec;
+		} else{
+			leptonPT = muontight.at(lepIndex)->PT;
+			leptonEta = muontight.at(lepIndex)->Eta;
+			leptonPhi = muontight.at(lepIndex)->Phi;
+			muVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
+			emu = muVec.E();
+			pxmu = muVec.Px();
+			pymu = muVec.Py();
+			pzmu = muVec.Pz();
+			lepVec = muVec;
+		}
+		TLorentzVector missingET(0.,0.,0.,0.);
+		missingET=(met.at(0)->P4());
+		double pxnu = missingET.Px();
+		double pynu =missingET.Py();
+		double pznu = 0.;
+		// use pznu = - B/2*A +/- sqrt(B*B-4*A*C)/(2*A)
 
-			double tmproot = B*B - 4.0*A*C;
+		double a = M_W*M_W - M_lepton*M_lepton + 2.0*(pxmu*pxnu + pymu*pynu);
+		double A = 4.0*(emu*emu - pzmu*pzmu);
+		double B = -4.0*a*pzmu;
+		double C = 4.0*emu*emu*(pxnu*pxnu + pynu*pynu) - a*a;
 
-			if (tmproot<0) {
-				bool isComplex_= true;
-				pznu = - B/(2*A); // take real part of complex roots
-			}
-			else {
-				bool isComplex_ = false;
-				double tmpsol1 = (-B + TMath::Sqrt(tmproot))/(2.0*A);
-				double tmpsol2 = (-B - TMath::Sqrt(tmproot))/(2.0*A);
+		double tmproot = B*B - 4.0*A*C;
 
-				if (type == 0 ) {
-					// two real roots, pick the one closest to pz of muon
-					if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
-					else pznu = tmpsol1;
-					// if pznu is > 300 pick the most central root
-					if ( pznu > 300. ) {
-						if (TMath::Abs(tmpsol1)<TMath::Abs(tmpsol2) ) pznu = tmpsol1;
-						else pznu = tmpsol2;
-					}
-				}//if type==0
-				if (type == 1 ) {
-					// two real roots, pick the one closest to pz of muon
-					if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
-					else pznu = tmpsol1;
-				}//if type==1
-				if (type == 2 ) {
-					// pick the most central root.
+		if (tmproot<0) {
+			bool isComplex_= true;
+			pznu = - B/(2*A); // take real part of complex roots
+		}
+		else {
+			bool isComplex_ = false;
+			double tmpsol1 = (-B + TMath::Sqrt(tmproot))/(2.0*A);
+			double tmpsol2 = (-B - TMath::Sqrt(tmproot))/(2.0*A);
+
+			if (type == 0 ) {
+				// two real roots, pick the one closest to pz of muon
+				if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
+				else pznu = tmpsol1;
+				// if pznu is > 300 pick the most central root
+				if ( pznu > 300. ) {
 					if (TMath::Abs(tmpsol1)<TMath::Abs(tmpsol2) ) pznu = tmpsol1;
 					else pznu = tmpsol2;
-				}//if type==2
-				if (type == 3 ) {
-					// pick the largest value of the cosine
-					TVector3 p3w, p3mu;
-					p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol1);
-					p3mu.SetXYZ(pxmu, pymu, pzmu );
-					double sinthcm1 = 2.*(p3mu.Perp(p3w))/M_W;
-					p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol2);
-					double sinthcm2 = 2.*(p3mu.Perp(p3w))/M_W;
+				}
+			}//if type==0
+			if (type == 1 ) {
+				// two real roots, pick the one closest to pz of muon
+				if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
+				else pznu = tmpsol1;
+			}//if type==1
+			if (type == 2 ) {
+				// pick the most central root.
+				if (TMath::Abs(tmpsol1)<TMath::Abs(tmpsol2) ) pznu = tmpsol1;
+				else pznu = tmpsol2;
+			}//if type==2
+			if (type == 3 ) {
+				// pick the largest value of the cosine
+				TVector3 p3w, p3mu;
+				p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol1);
+				p3mu.SetXYZ(pxmu, pymu, pzmu );
+				double sinthcm1 = 2.*(p3mu.Perp(p3w))/M_W;
+				p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol2);
+				double sinthcm2 = 2.*(p3mu.Perp(p3w))/M_W;
 
-					double costhcm1 = TMath::Sqrt(1. - sinthcm1*sinthcm1);
-					double costhcm2 = TMath::Sqrt(1. - sinthcm2*sinthcm2);
+				double costhcm1 = TMath::Sqrt(1. - sinthcm1*sinthcm1);
+				double costhcm2 = TMath::Sqrt(1. - sinthcm2*sinthcm2);
 
-					if ( costhcm1 > costhcm2 ) pznu = tmpsol1;
-					else pznu = tmpsol2;
-				}//if type==3
-			}//else
-			TLorentzVector neutrinoP4(missingET.Px(),
+				if ( costhcm1 > costhcm2 ) pznu = tmpsol1;
+				else pznu = tmpsol2;
+			}//if type==3
+		}//else
+		TLorentzVector neutrinoP4(missingET.Px(),
 							missingET.Py(),
 							pznu,
 							TMath::Sqrt(TMath::Power(missingET.Pt(),2)+TMath::Power(pznu,2)));
 			neutrinoMomentumHisto->Fill(neutrinoP4.Pt());
 			wBosonHistoL->Fill((lepVec+neutrinoP4).M());
-			TLorentzVector bJetVec;
+			TLorentzVector bJetVec(0.,0.,0.,0.);
 			for (size_t i = 0; i<jet.size(); i++){
 				if (jet.at(i)->BTag && (TMath::Abs(jet.at(i)->Eta) < 2.5)){
-					double DelR;
-					if (elecs.size()==1){
-						DelR = deltaR(jet.at(i), elecs.at(0));
+					double DelR=0;
+					if (nrOfHighPtElecs==1){
+						DelR = deltaR(jet.at(i), elecs.at(lepIndex));
 					}
-					if (elecs.size()==0){
-						DelR = deltaR(jet.at(i), muontight.at(0));
+					if (nrOfHighPtMus==1){
+						DelR = deltaR(jet.at(i), muontight.at(lepIndex));
 					}
 					if (DelR<1.2){
 						bJetVec = makeTLorentzVector(jet.at(i));
 						TLorentzVector quarkVec = bJetVec+lepVec+neutrinoP4;
-						double JetR;
+						double JetR=0;
 						JetR = TMath::Sqrt(TMath::Power(jet.at(i)->DeltaEta,2)+TMath::Power(jet.at(i)->DeltaPhi,2));
 						if(DelR<JetR){quarkVec = quarkVec - lepVec;}
 						topQuarkHisto->Fill((quarkVec).M());
 					}
 				}
 			}
-		}
+	//	}
 		leadingJetHistoAll->Fill(leadingJetVectorA.M());
 		if (leadingJetVectorLeptonic.M()>0)
 			leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
