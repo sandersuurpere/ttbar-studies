@@ -23,6 +23,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	TH1* leadingJetHistoAll = addPlot(new TH1D("leadingJetHistoAll", "Leading jet masses (all events)",100,0,50), "m_jet","N_e");
 	TH1* leadingJetHistoLeptonic = addPlot(new TH1D("leadingJetHistoLeptonic", "Leading jet masses in single lepton events",100,0,50), "m_jet","N_e");
 	TH1* quarkHistoHadronicBoosted= addPlot(new TH1D("quarkHistoHadronicBoosted", "Top quark mass from full hadronic, boosted",100,0,400), "m_3jets","N_e");
+	TH1* histoSL=addPlot(new TH1D("tquark_SL","t-quark m_{inv} mass in semileptonic decay",50,100,400),"M [GeV]","N");
 
 	size_t nevents=tree()->entries();
 
@@ -221,7 +222,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 					if(DelR<JetR){quarkVec = quarkVec - lepVec;}
 					topQuarkHisto->Fill((quarkVec).M());
 
-				}else{ // getting top mass from hadronic decay 
+				}else{ // getting top mass from hadronic decay (copied from Aleksei) 
 					for(size_t j=0;j<jet.size();j++){
 						if (acceptLJet(jet.at(j))){
 							DelR = deltaR(jet.at(i),jet.at(j));
@@ -265,11 +266,63 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 					}
 				
 				}//else statement (corresponding to DelR>=1.2)
+			}//if (acceptBJet) 
+		}// jet loop
+	
+		leadingJetHistoAll->Fill(leadingJetVectorA.M()); // seeing what the leading jet looks like
+		if (leadingJetVectorLeptonic.M()>0)
+			//the leading jet mass corresponding to leptonic decay
+			leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
+		
+		// minimum chi^2
+		ttbar_solver solver;	
+		double topmass1 = 0;
+		double topmass2 = 0;
+		solver.setLepton(lepVec);
+		solver.setNeutrino(neutrinoP4);
+		double bestchi = 1000;
+		for(size_t i=0; i<jet.size(); i++){
+			//bjet from blv
+			if(acceptBJet(jet.at(i))){
+				TLorentzVector bjet1(0.,0.,0.,0.);
+				TLorentzVector bjet2(0.,0.,0.,0.);
+				TLorentzVector ljet1(0.,0.,0.,0.);
+				TLorentzVector ljet2(0.,0.,0.,0.);
+				bjet1=makeTLorentzVector(jet.at(i));
+				solver.setBJetA(bjet1);
+				for(size_t j=0; j<jet.size(); j++){
+					//bjet from bqq'
+					if(acceptBJet(jet.at(j)) && j!=i){
+						bjet2=makeTLorentzVector(jet.at(j));
+						solver.setBJetB(bjet2);
+						for(size_t k=0;k<jet.size();k++){
+							//first light jet
+							if(acceptLJet(jet.at(k))){
+								ljet1=makeTLorentzVector(jet.at(k));
+								solver.setLightJetA(ljet1);
+								for(size_t l=k;l<jet.size();l++){
+									//second lightjet
+									if(acceptLJet(jet.at(l)) && l!=k){
+										ljet2=makeTLorentzVector(jet.at(l));
+										solver.setLightJetB(ljet2);
+										//comparing chi2 with previous combination
+										double chi2=solver.getChi2();
+										if(chi2<bestchi){
+											bestchi=chi2;	
+											topmass1=(bjet1+neutrinoP4+lepVec).M();
+											topmass2=(bjet2+ljet1+ljet2).M();
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
-		}
-	leadingJetHistoAll->Fill(leadingJetVectorA.M());
-	if (leadingJetVectorLeptonic.M()>0)
-		leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
+		}//chi2 outer loop
+		//histogram of semileptonic decay
+		histoSL->Fill(topmass1); //from blv
+		histoSL->Fill(topmass2); //from bqq'
 	} // for event
 	processEndFunction();
 }//void testanalyser::analyze
