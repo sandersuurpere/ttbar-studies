@@ -2,12 +2,11 @@
 #include "interface/testanalyser.h"
 #include "../interface/helpers.h"
 #include "../interface/ttbar_solver.h"
-#include "../interface/pzCalculator.h"
 #include "TMath.h"
 using namespace std;
 
-double M_mu =  0.10566;
-double M_e = 0.511e-3;
+Double_t W_BOSON_MASS = 80.385;
+Double_t TOP_MASS = 172.44;
 
 void testanalyser::analyze(size_t childid /* this info can be used for printouts */){
 
@@ -18,11 +17,20 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	d_ana::dBranchHandler<Muon>        muontight(tree(),"Muon");
 	d_ana::dBranchHandler<MissingET>   met(tree(),"MissingET");
 
+	TH1* topQuarkHisto=addPlot(new TH1D("topQuarkHisto","topHistoTitle",100,0,500),"m [GeV]","N_{e}");
+	TH1* wBosonHistoL=addPlot(new TH1D("wBosonHistoL","W",100,79,130),"m [GeV]","N_{e}");
 	TH1* neutrinoMomentumHisto = addPlot(new TH1D("neutrinoMomentumHisto", "nu histo",100,0,200), "pT","N");
+	TH1* leadingJetHistoAll = addPlot(new TH1D("leadingJetHistoAll", "Leading jet masses (all events)",100,0,50), "m_jet","N_e");
+	TH1* leadingJetHistoLeptonic = addPlot(new TH1D("leadingJetHistoLeptonic", "Leading jet masses in single lepton events",100,0,50), "m_jet","N_e");
+	TH1* quarkHistoHadronicBoosted= addPlot(new TH1D("quarkHistoHadronicBoosted", "Top quark mass from full hadronic, boosted",100,0,400), "m_3jets","N_e");
 	TH1* histoSL=addPlot(new TH1D("tquark_SL","t-quark m_{inv} mass in semileptonic decay",50,100,400),"M [GeV]","N");
+	
 	TH1* topMHistoBoost=addPlot(new TH1D("topMHistoBoost","t-quark m_{inv} mass",100,0,400),"M [GeV]","N");
+
 	TH1* tbarMHistoBoost=addPlot(new TH1D("tbarMHistoBoost","antit-quark m_{inv} mass",100,0,400),"M [GeV]","N");
+
 	TH1* massDiffHisto = addPlot(new TH1D("massDiffHisto", "m_t - m_{bar{t}}", 100, -50, 50), "#Delta m", "N_{events}");
+
 
 	size_t nevents=tree()->entries();
 
@@ -37,7 +45,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		reportStatus(eventno,nevents);
 		tree()->setEntry(eventno);
 
-		//At least 2 b-jets and 2 light jets
+		//At least 2 b-jets
 		size_t bjets=0;
 		size_t ljets=0;
 		for(size_t i=0;i<jet.size();i++){
@@ -50,22 +58,34 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		if(bjets<2){continue;}
 		if(ljets<2){continue;}
 
+
+		TLorentzVector leadingJetVectorA(0.,0.,0.,0.); //the leading jet of an event
+		Double_t leadingJetPT=0;
+		TLorentzVector leadingJetVectorLeptonic(0.,0.,0.,0.);
+		Double_t leadingJetPTLeptonic=0;
+		TLorentzVector lepVec(0.,0.,0.,0.);
+
+		for (size_t i = 0; i<jet.size(); i++){
+			if ((jet.at(i)->PT) > leadingJetPT){
+				leadingJetVectorA.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
+			}
+		}
+
 		//determine the number of leptons with pt>30
 		size_t nrOfHighPtLeps=0;
 		size_t nrOfHighPtElecs=0;
 		size_t nrOfHighPtMus=0;
 		size_t lepIndex=0; // hold the value corresponding to the index of the high PT lepton
-		double M_lepton = M_mu;
 		for(size_t i=0; i<elecs.size(); i++){
 			if (((elecs.at(i)->PT) > 30) && (TMath::Abs(elecs.at(i)->Eta) < 2.1)){
-				nrOfHighPtLeps++;
-				nrOfHighPtElecs++;
+				nrOfHighPtLeps=nrOfHighPtLeps+1;
+				nrOfHighPtElecs=nrOfHighPtElecs+1;
 			}
 		}	
 		for(size_t i=0; i<muontight.size(); i++){
 			if (((muontight.at(i)->PT) > 30) && (TMath::Abs(muontight.at(i)->Eta) < 2.1)){
-				nrOfHighPtLeps++;
-				nrOfHighPtMus++;
+				nrOfHighPtLeps=nrOfHighPtLeps+1;
+				nrOfHighPtMus=nrOfHighPtMus+1;
 			}
 		}	
 
@@ -84,22 +104,36 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 			}
 		}
 
-		TLorentzVector lepVec(0.,0.,0.,0.);
+		for (size_t i = 0; i<jet.size(); i++){
+			if ((jet.at(i)->PT) > leadingJetPTLeptonic){
+				leadingJetVectorLeptonic.SetPtEtaPhiM(jet.at(i)->PT, jet.at(i)->Eta, jet.at(i)->Phi, jet.at(i)->Mass);
+			}
+		}
+		int type = 1;
+		double M_W  = W_BOSON_MASS;
+		double M_mu =  0.10566;
+		double M_e = 0.511e-3;
+		double M_lepton = M_mu;
+		double emu=0;
+		double pxmu=0;
+		double pymu=0;
+		double pzmu=0; 
+		double leptonPT=0;
+		double leptonEta=0;
+		double leptonPhi=0;
 		TLorentzVector elecVec(0.,0.,0.,0.);
 		TLorentzVector muVec(0.,0.,0.,0.);
 		bool antiLepton = false;
-		double leptonPT, leptonEta, leptonPhi;
 
 		if (nrOfHighPtElecs==1){
 			M_lepton = M_e;
 			leptonPT = elecs.at(lepIndex)->PT;
 			leptonEta = elecs.at(lepIndex)->Eta;
 			leptonPhi = elecs.at(lepIndex)->Phi;
-			lepVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
-			//elecVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
-		//	pymu = elecVec.Py();
-		//	pzmu = elecVec.Pz();
-		//	lepVec = elecVec;
+			elecVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
+			pymu = elecVec.Py();
+			pzmu = elecVec.Pz();
+			lepVec = elecVec;
 			if (elecs.at(lepIndex)->Charge == 1){
 				antiLepton = true;
 			}
@@ -107,33 +141,91 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 			leptonPT = muontight.at(lepIndex)->PT;
 			leptonEta = muontight.at(lepIndex)->Eta;
 			leptonPhi = muontight.at(lepIndex)->Phi;
-			lepVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
-			/*emu = muVec.E();
+			muVec.SetPtEtaPhiM(leptonPT, leptonEta, leptonPhi , M_lepton);
+			emu = muVec.E();
 			pxmu = muVec.Px();
 			pymu = muVec.Py();
 			pzmu = muVec.Pz();
-			lepVec = muVec;*/
+			lepVec = muVec;
 			if (muontight.at(lepIndex)->Charge == 1){
 				antiLepton = true;
 			}
 		}
-
-		//finding neutrino mass from missing transverse energy
 		TLorentzVector missingET(0.,0.,0.,0.);
 		missingET=(met.at(0)->P4());
-		pzCalculator calculator;
-		calculator.setLepton(lepVec);
-		calculator.setMET(missingET);
-		calculator.setLepMass(M_lepton);
-		double pznu = calculator.getPz();
+		double pxnu = missingET.Px();
+		double pynu =missingET.Py();
+		double pznu = 0.;
+		// use pznu = - B/2*A +/- sqrt(B*B-4*A*C)/(2*A)
+
+		double a = M_W*M_W - M_lepton*M_lepton + 2.0*(pxmu*pxnu + pymu*pynu);
+		double A = 4.0*(emu*emu - pzmu*pzmu);
+		double B = -4.0*a*pzmu;
+		double C = 4.0*emu*emu*(pxnu*pxnu + pynu*pynu) - a*a;
+
+		double tmproot = B*B - 4.0*A*C;
+
+		if (tmproot<0) {
+			bool isComplex_= true;
+			pznu = - B/(2*A); // take real part of complex roots
+		}
+		else {
+			bool isComplex_ = false;
+			double tmpsol1 = (-B + TMath::Sqrt(tmproot))/(2.0*A);
+			double tmpsol2 = (-B - TMath::Sqrt(tmproot))/(2.0*A);
+
+			if (type == 0 ) {
+				// two real roots, pick the one closest to pz of muon
+				if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
+				else pznu = tmpsol1;
+				// if pznu is > 300 pick the most central root
+				if ( pznu > 300. ) {
+					if (TMath::Abs(tmpsol1)<TMath::Abs(tmpsol2) ) pznu = tmpsol1;
+					else pznu = tmpsol2;
+				}
+			}//if type==0
+			if (type == 1 ) {
+				// two real roots, pick the one closest to pz of muon
+				if (TMath::Abs(tmpsol2-pzmu) < TMath::Abs(tmpsol1-pzmu)) { pznu = tmpsol2;}
+				else pznu = tmpsol1;
+			}//if type==1
+			if (type == 2 ) {
+				// pick the most central root.
+				if (TMath::Abs(tmpsol1)<TMath::Abs(tmpsol2) ) pznu = tmpsol1;
+				else pznu = tmpsol2;
+			}//if type==2
+			if (type == 3 ) {
+				// pick the largest value of the cosine
+				TVector3 p3w, p3mu;
+				p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol1);
+				p3mu.SetXYZ(pxmu, pymu, pzmu );
+				double sinthcm1 = 2.*(p3mu.Perp(p3w))/M_W;
+				p3w.SetXYZ(pxmu+pxnu, pymu+pynu, pzmu+ tmpsol2);
+				double sinthcm2 = 2.*(p3mu.Perp(p3w))/M_W;
+
+				double costhcm1 = TMath::Sqrt(1. - sinthcm1*sinthcm1);
+				double costhcm2 = TMath::Sqrt(1. - sinthcm2*sinthcm2);
+
+				if ( costhcm1 > costhcm2 ) pznu = tmpsol1;
+				else pznu = tmpsol2;
+			}//if type==3
+		}//else
+		
 		TLorentzVector neutrinoP4(missingET.Px(),
-					missingET.Py(),
-					pznu,
-					TMath::Sqrt(TMath::Power(missingET.Pt(),2)+TMath::Power(pznu,2)));
+							missingET.Py(),
+							pznu,
+							TMath::Sqrt(TMath::Power(missingET.Pt(),2)+TMath::Power(pznu,2)));
+
 		neutrinoMomentumHisto->Fill(neutrinoP4.Pt());
+		wBosonHistoL->Fill((lepVec+neutrinoP4).M());
+		
+
+
 
 		TLorentzVector t(0., 0., 0., 0.); //top quark
 		TLorentzVector tbar(0., 0., 0., 0.); // top antiquark
+		TLorentzVector wBosLep = lepVec + neutrinoP4; // W boson of the leptonic decay
+		TLorentzVector wBosHad(0.,0.,0.,0.); // W boson of the hadronic decay
 		TLorentzVector bJetVec(0.,0.,0.,0.);
 		TLorentzVector empty(0.,0.,0.,0.);// an Lorentz vector that stays empty
 
@@ -154,10 +246,13 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 					JetR = TMath::Sqrt(TMath::Power(jet.at(i)->DeltaEta,2)+TMath::Power(jet.at(i)->DeltaPhi,2));
 					if(DelR<JetR && antiLepton){
 						t = t - lepVec;
+					//	topMHistoBoost->Fill(t.M());
 						}
 					if(DelR<JetR && !antiLepton){
 						tbar = tbar - lepVec;
+					//	tbarMHistoBoost->Fill(tbar.M());
 					}
+					//topQuarkHisto->Fill((quarkVec).M());
 
 
 				}else{ // getting top mass from hadronic decay (copied from Aleksei) 
@@ -198,6 +293,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 											if(antiLepton){
 												tbar=jet1+jet2+jet3;
 											}else{t=jet1+jet2+jet3;}
+											//quarkHistoHadronicBoosted->Fill(topQ.M());
 										}
 									}
 								}
@@ -208,15 +304,16 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				}//else statement (corresponding to DelR>=1.2)
 			}//if (acceptBJet) 
 		}// jet loop
-
-		//find masses and mass differences of t and tbar
 		if (t.M()>0 && tbar.M()>0){
 		
 			massDiffHisto->Fill(t.M() - tbar.M());
 			topMHistoBoost->Fill(t.M());
 			tbarMHistoBoost->Fill(tbar.M());
 		}
-		
+		leadingJetHistoAll->Fill(leadingJetVectorA.M()); // seeing what the leading jet looks like
+		if (leadingJetVectorLeptonic.M()>0)
+			//the leading jet mass corresponding to leptonic decay
+			leadingJetHistoLeptonic->Fill(leadingJetVectorLeptonic.M());
 		
 		// minimum chi^2
 		ttbar_solver solver;	
@@ -295,7 +392,17 @@ void testanalyser::postProcess(){
 	samplecoll.readFromFile(getOutPath());
 
 	std::vector<TString> alllegends = samplecoll.listAllLegends();
-	
+
+	/*
+	 * Example how to process the output.
+	 * Usually, one would define the legendname of the histogram to be used here
+	 * by hand, e.g. "signal" or "background".
+	 * To make this example run in any case, I am using alllegends.at(0), which
+	 * could e.g. be the signal legend.
+	 *
+	 * So in practise, the following would more look like
+	 * samplecoll.getHistos("signal");
+	 */
 	if(alllegends.size()>0){
 		d_ana::histoCollection histos=samplecoll.getHistos(alllegends.at(0));
 
