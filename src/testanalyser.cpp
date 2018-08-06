@@ -24,7 +24,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	TH1* histoSL=addPlot(new TH1D("tquark_SL","t-quark m_{inv} mass in semileptonic decay",100,0,500),"M [GeV]","N");
 	TH1* topMHistoNonBoosted=addPlot(new TH1D("topMHistoBoostNonBoosted","t-quark m_{inv} mass",100,0,400),"M [GeV]","N");
 	TH1* tbarMHistoNonBoosted=addPlot(new TH1D("tbarMHistoBoostNonBoosted","anti t-quark m_{inv} mass",100,0,400),"M [GeV]","N");
-	TH1* massDiffHistoNonBoosted = addPlot(new TH1D("massDiffHistoNonBoosted", "m_t - m_{bar{t}}", 100, -50, 50), "#Delta m", "N_{events}");
+	TH1* massDiffHistoNonBoosted = addPlot(new TH1D("massDiffHistoNonBoosted", "m_t - m_{bar{t}}", 50, -50, 50), "#Delta m", "N_{events}");
 
 	size_t nevents=tree()->entries();
 
@@ -218,6 +218,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		//histogram of semileptonic decay
 		histoSL->Fill(topmass1); //from blv
 		histoSL->Fill(topmass2); //from bqq'
+		massDiffHistoNonBoosted->Fill((topmass1-topmass2)); //from bqq'
 		cout<<"top mass from leptonic: "<<topmass1<<endl;
 		cout<<"top mass from hadronic: "<<topmass2<<endl;
 	} // for event
