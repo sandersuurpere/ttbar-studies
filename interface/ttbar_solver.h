@@ -2,6 +2,9 @@
 
 class ttbar_solver{
 	public:
+
+		ttbar_solver():mtop_hadr_(172.5), mtop_lept_(172.5){}
+
 		void setLightJetA(const TLorentzVector& jet){
 			ljeta=jet;
 		}
@@ -31,8 +34,16 @@ class ttbar_solver{
 		}
 		double getChi2()const;
 
+		void setMtopHadronic(const double& m){
+			mtop_hadr_ = m;
+		}
+		void setMtopLeptonic(const double& m){
+			mtop_lept_ = m;
+		}
+
 	private:
 		TLorentzVector getNeutrinoVector(TLorentzVector lepton, TLorentzVector met);
 		TLorentzVector ljeta, ljetb, ljetc, ljetd, bjeta, bjetb, lepton, neutrino;
 		bool fh = false;
+		double mtop_hadr_, mtop_lept_;
 };

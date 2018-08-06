@@ -20,7 +20,7 @@ double deltaR(T* a, V* b){
 template<class T>
 bool acceptLJet(T* jet){
 	bool acceptable = true;
-	if ((jet->BTag) || (TMath::Abs(jet->Eta)>2.5)){
+	if ((jet->BTag) || (TMath::Abs(jet->Eta)>2.5 || (jet->PT <= 25))){
 		acceptable = false;
 	}
 	return acceptable;
@@ -29,7 +29,7 @@ bool acceptLJet(T* jet){
 template<class T>
 bool acceptBJet(T* jet){
 	bool acceptable = true;
-	if ((!(jet->BTag)) || (TMath::Abs(jet->Eta)>2.5)){
+	if ((!(jet->BTag)) || (TMath::Abs(jet->Eta)>2.5) || (jet->PT <= 25)){
 		acceptable = false;
 	}
 	return acceptable;
