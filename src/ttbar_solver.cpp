@@ -2,7 +2,7 @@
 
 double ttbar_solver::getChi2()const{
 	double M_W = 80.385;
-	double M_T = 172.44;
+	double M_T = 172.5;
 	
 	//resolutions
 	double sigmaljet = 5.0;
