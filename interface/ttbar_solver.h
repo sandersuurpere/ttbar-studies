@@ -2,6 +2,8 @@
 
 class ttbar_solver{
 	public:
+		
+		bool isChiA = false;
 
 		ttbar_solver():mtop_hadr_(172.5), mtop_lept_(172.5){}
 
@@ -32,13 +34,21 @@ class ttbar_solver{
 		void setNeutrino(TLorentzVector neu){
 			neutrino=neu;
 		}
-		double getChi2()const;
+		double getChi2();
 
 		void setMtopHadronic(const double& m){
 			mtop_hadr_ = m;
 		}
 		void setMtopLeptonic(const double& m){
 			mtop_lept_ = m;
+		}
+
+		void setIsChiA(bool b){
+			isChiA = b;
+		}
+
+		bool getIsChiA(){
+			return isChiA;
 		}
 
 	private:

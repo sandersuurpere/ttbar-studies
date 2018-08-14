@@ -26,15 +26,12 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	TH1* tbarMHistoNonBoosted=addPlot(new TH1D("tbarMHistoBoostNonBoosted","anti t-quark m_{inv} mass",100,0,400),"M [GeV]","N");
 	TH1* massDiffHistoNonBoosted = addPlot(new TH1D("massDiffHistoNonBoosted", "m_t - m_{#bar{t}}", 50, -50, 50), "#Delta m", "N_{events}");
 	TH1* chi2Histo= addPlot(new TH1D("chi2Histo", "#Chi^2", 100, 0, 100), "#Chi^2", "N_{events}");
-	TH1* chi2VsMassDiffHisto= addPlot(new TH1D(" chi2VsMassDiffHisto", "#Chi^2 vs mass difference", 50, -30, 30), "#Delta m", "#Chi^2");
+	TH1* chi2VsMassDiffHisto= addPlot(new TH1D(" chi2VsMassDiffHisto", "#Chi^2 vs mass difference", 50, -3, 3), "#Delta m", "#Chi^2");
 	TH1* chi2VsMassHisto= addPlot(new TH1D(" chi2VsMassHisto", "#Chi^2 vs top mass", 50, 0, 300), "m_t", "#Chi^2");
-
-	/*TH2* chi2Histo2D= addPlot2(new TH2D("chi2Histo2D",
-						"#Chi^2 for m_t and m_{#bar{t}}",
-						100, 0, 50,
-						100, 0, 50),
-						"leptonic", "hadronic");
-	*/
+//	TH1* chi2Histo2D= addPlot(new TH2D("chi2Histo2D", "#Chi^2 for m_t and m_{#bar{t}}", 100, 0, 200, 100, 0,200), "top", "antitop", "Chi^2");
+	TH1* hadronicTopMassHisto = addPlot(new TH1D("hadronicTopMassHisto", "Top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	TH1* hadronicTbarMassHisto = addPlot(new TH1D("hadronicTbarMassHisto", "Anti top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	
 	size_t nevents=tree()->entries();
 
 	if(isTestMode())
@@ -74,6 +71,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		}
 
 		if (!acceptableEvent) continue;
+
 		//define the lower bound for lepton transverse momentum according to the paper
 		double muonPtLimit = 20;
 		double electronEtLimit = 25;
@@ -168,32 +166,18 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		TLorentzVector tbar(0., 0., 0., 0.); // top antiquark
 		TLorentzVector bJetVec(0.,0.,0.,0.);
 		TLorentzVector empty(0.,0.,0.,0.);// an Lorentz vector that stays empty
-
-
+		
 		// minimum Chi^2
 		ttbar_solver solver;	
-		ttbar_solver solver2;	
 
 		double topmass = 0;
 		double tbarmass = 0;
-
-		double topmass1 =0;
-		double topmass2=0;
-		double range = 60.0;
-		double halfRange = range/2;
-		double step = 0.5;
-
 		solver.setLepton(lepVec);
 		solver.setNeutrino(neutrinoP4);
-		solver2.setLepton(lepVec);
-		solver2.setNeutrino(neutrinoP4);
-		double bestchi = 1000;
-		for(double m = 160; m<180; m=m+1){
-			if (antiLepton){
-				solver.setMtopLeptonic(m);
-			} else {
-				solver.setMtopHadronic(m);
-			}	
+		double bestchi = 100000;
+		solver.setMtopLeptonic(M_T);
+		for(double m = 125; m<250; m=m+5){
+			solver.setMtopHadronic(m);
 			for(size_t i=0; i<jet.size(); i++){
 				//bjet from blv
 				if(acceptBJet(jet.at(i))){
@@ -203,31 +187,42 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 					TLorentzVector ljet2(0.,0.,0.,0.);
 					bjet1 = makeTLorentzVector(jet.at(i));
 					solver.setBJetA(bjet1);
-					solver2.setBJetA(bjet1);
 					for(size_t j=0; j<jet.size(); j++){
 						//bjet from bqq'
 						if(acceptBJet(jet.at(j)) && j!=i){
-							bjet2=makeTLorentzVector(jet.at(j));
 							solver.setBJetB(bjet2);
-							solver2.setBJetB(bjet2);
 							for(size_t k=0;k<jet.size();k++){
 								//first light jet
 								if(acceptLJet(jet.at(k))){
 									ljet1=makeTLorentzVector(jet.at(k));
 									solver.setLightJetA(ljet1);
-									solver2.setLightJetA(ljet1);
 									for(size_t l=k;l<jet.size();l++){
 										//second light jet
 										if(acceptLJet(jet.at(l)) && l!=k){
 											ljet2=makeTLorentzVector(jet.at(l));
 											solver.setLightJetB(ljet2);
-											solver2.setLightJetB(ljet2);
 											// vary top mass,
 											// leave antitop fixed
 											double chi2=solver.getChi2();
 											if(chi2<bestchi){
 												bestchi=chi2;	
-												topmass = m;
+												if(antiLepton){
+													if (solver.getIsChiA()==true){
+														tbar = bjet1 +ljet1 + ljet2;
+														tbarmass = m;
+													} else{
+														tbar = bjet2 + ljet1 + ljet2;
+														tbarmass = m;
+													}
+												} else{
+													if (solver.getIsChiA()==true){
+														t = bjet1 +ljet1+ljet2;
+														topmass = m;
+													}else{
+														t = bjet2 + ljet1 + ljet2;
+														topmass = m;
+													}
+												}
 											}
 										}
 									}
@@ -238,9 +233,11 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				}
 			}//i<jet.size()
 		}
-		chi2VsMassDiffHisto->Fill(topmass - M_T, bestchi);
-		chi2VsMassHisto->Fill(topmass, bestchi);
-		
+		//if (t!=empty) hadronicTopMassHisto->Fill(t.M());
+		//if (tbar!=empty) hadronicTbarMassHisto->Fill(tbar.M());
+		if (antiLepton && (tbarmass > 0)) hadronicTbarMassHisto->Fill(tbarmass);
+		if (topmass>0) hadronicTopMassHisto->Fill(topmass);
+
 	} // for event
 	processEndFunction();
 }//void testanalyser::analyze
