@@ -74,7 +74,7 @@ $    this can be indicated here and later checked in the loop.
 $ 8) Optional other options (not used for now)
 
 
-/afs/cern.ch/user/s/ssuurper/public/Delphes/test.root , t #bar{t}, 432, 100, auto, 1
+/afs/cern.ch/work/s/ssuurper/public/delphes/test2.root , t #bar{t}, 432, 100, auto, 1
 
 $ The last entry is an example for running over all input files in a directory
 
