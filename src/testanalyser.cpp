@@ -32,10 +32,17 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 	//TH1* hadronicTbarMassHisto = addPlot(new TH1D("hadronicTbarMassHisto", "Anti top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
 	//TH1* lightJetHisto = addPlot(new TH1D("lightJetHisto", "Sum of 2 light jets", 100, 0, 200), "m_{2 light jets} (Gev)", "N");
 	
-	TH1* hadronicTopMassHisto2 = addPlot(new TH1D("hadronicTopMassHisto2", "Top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
-	TH1* hadronicTbarMassHisto2 = addPlot(new TH1D("hadronicTbarMassHisto2", "Anti top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
-	TH1* lightJetHisto2 = addPlot(new TH1D("lightJetHisto2", "Sum of 2 light jets", 100, 0, 200), "m_{2 light jets} (Gev)", "N");
+	//TH1* hadronicTopMassHisto2 = addPlot(new TH1D("hadronicTopMassHisto2", "Top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	//TH1* hadronicTbarMassHisto2 = addPlot(new TH1D("hadronicTbarMassHisto2", "Anti top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	//TH1* lightJetHisto2 = addPlot(new TH1D("lightJetHisto2", "Sum of 2 light jets", 100, 0, 200), "m_{2 light jets} (Gev)", "N");
 	
+	//TH1* hadronicTopMassHisto4 = addPlot(new TH1D("hadronicTopMassHisto4", "Top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	//TH1* hadronicTbarMassHisto4= addPlot(new TH1D("hadronicTbarMassHisto4", "Anti top mass from hadronic decay", 50, 0, 400), "m_t (Gev)", "N");
+	//TH1* lightJetHisto4 = addPlot(new TH1D("lightJetHisto4", "Sum of 2 light jets", 100, 0, 200), "m_{2 light jets} (Gev)", "N");
+	TH1* hadronicTopMassHisto6 = addPlot(new TH1D("hadronicTopMassHisto6", "Top mass from hadronic decay", 100, 0, 400), "m_t (Gev)", "N");
+	TH1* hadronicTbarMassHisto6 = addPlot(new TH1D("hadronicTbarMassHisto6", "Anti top mass from hadronic decay", 100, 0, 400), "m_t (Gev)", "N");
+	TH1* lightJetHisto6 = addPlot(new TH1D("lightJetHisto6", "Sum of 2 light jets", 100, 0, 200), "m_{2 light jets} (Gev)", "N");
+
 	size_t nevents=tree()->entries();
 
         int n=0;
@@ -183,6 +190,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 		solver.setNeutrino(neutrinoP4);
 		double bestchi = 100000;
 		solver.setMtopLeptonic(M_T);
+		//for (size_t m=165; m<180; m=m+1){
 		solver.setMtopHadronic(M_T);
 		for(size_t i=0; i<jet.size(); i++){
 			//bjet from blv
@@ -206,7 +214,7 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 										solver.setLightJetB(ljet2);
 										wVec = ljet1 + ljet2;
 										double deltaW = TMath::Abs(wVec.M()-80.385);
-										if (deltaW<15.0){
+										if (deltaW<20.0){
 											double chi2=solver.getChi2();
 											if(chi2<bestchi){
 												bestchi=chi2;	
@@ -233,13 +241,20 @@ void testanalyser::analyze(size_t childid /* this info can be used for printouts
 				}//for j<jet.size()
 			}//if(acceptBJet(jet.at(i)))
 		}//i<jet.size()
+		//}//for m
 		n++;
 		//if (t!=empty) hadronicTopMassHisto->Fill(t.M());
 		//if (tbar!=empty) hadronicTbarMassHisto->Fill(tbar.M());
-		if (t!=empty) hadronicTopMassHisto2->Fill(t.M());
-		if (tbar!=empty) hadronicTbarMassHisto2->Fill(tbar.M());
-		lightJetHisto2->Fill(wVec.M());
+		//if (t!=empty) hadronicTopMassHisto2->Fill(t.M());
+		//if (tbar!=empty) hadronicTbarMassHisto2->Fill(tbar.M());
+		//if (t!=empty) hadronicTopMassHisto4->Fill(t.M());
+		//if (tbar!=empty) hadronicTbarMassHisto4->Fill(tbar.M());
+		if (t!=empty) hadronicTopMassHisto6->Fill(t.M());
+		if (tbar!=empty) hadronicTbarMassHisto6->Fill(tbar.M());
+	//	lightJetHisto->Fill(wVec.M());
 		//lightJetHisto2->Fill(wVec.M());
+		//lightJetHisto4->Fill(wVec.M());
+		lightJetHisto6->Fill(wVec.M());
 	} // for event
 	cout<<"selected events (n): " << n<<endl;
 	cout<<"events: "<<nevents<<endl;
